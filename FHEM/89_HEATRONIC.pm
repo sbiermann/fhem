@@ -107,8 +107,8 @@ sub HEATRONIC_DecodeMsg_SOL($$$);
 sub HEATRONIC_CRCtest($$$);
 sub HEATRONIC_CRCget($);
 sub HEATRONIC_timeDiff($);
-sub HEATRONIC_WriteHC_SollNiveau($$);
-sub HEATRONIC_WriteBetriebsart($$);
+sub HEATRONIC_WriteRequiredRoomTemperature($$);
+sub HEATRONIC_WriteHeatingMode($$);
 
 my @crc_table = qw( 0x00 0x02 0x04 0x06 0x08 0x0a 0x0c 0x0e 0x10 0x12 0x14 0x16 0x18 0x1a 0x1c 0x1e 
                     0x20 0x22 0x24 0x26 0x28 0x2a 0x2c 0x2e 0x30 0x32 0x34 0x36 0x38 0x3a 0x3c 0x3e
@@ -137,14 +137,14 @@ my $PROXY_SERVER = 0;
 
 # set telegramms and values
 my %HEATRONIC_sets = (
-  "hc1_betriebsart"      => {OPT => ""}, # values are set in 'HEATRONIC_Initialize'
-  "hc1_heizensollniveau" => {OPT => ":slider,10,0.5,30,1"}, # min 10, 0.5 celsius stepwith, max 30 celsius
+  "hc1_heatingmode"      => {OPT => ""}, # values are set in 'HEATRONIC_Initialize'
+  "hc1_requiredroomtemperature" => {OPT => ":slider,10,0.5,30,1"}, # min 10, 0.5 celsius stepwith, max 30 celsius
 );
 
-my %HEATRONIC_set_betriebsart = (
+my %HEATRONIC_set_heatingmode = (
   "frost"     => 1,
-  "sparen"    => 2,
-  "heizen"    => 3,
+  "economy"    => 2,
+  "comfort"    => 3,
   "auto"      => 4
 );
 
@@ -173,8 +173,8 @@ HEATRONIC_Initialize($)
       ."binary_operation:OR,AND "
 	  . $readingFnAttributes;
   # set option-list
-  my $optionList = join(",", sort keys %HEATRONIC_set_betriebsart);
-  $HEATRONIC_sets{"hc1_betriebsart"}{OPT} = ":$optionList";
+  my $optionList = join(",", sort keys %HEATRONIC_set_heatingmode);
+  $HEATRONIC_sets{"hc1_heatingmode"}{OPT} = ":$optionList";
 }
 
 # if fmt =~"m/_betriebsart$/"
@@ -563,13 +563,13 @@ HEATRONIC_Set($@)
 
     # execute command 
     $val *= 2;
-    $call_rtn = HEATRONIC_WriteHC_SollNiveau($hash, $val);
+    $call_rtn = HEATRONIC_WriteRequiredRoomTemperature($hash, $val);
     if ($call_rtn == 0) {
       # repeat one time if failed
-      $call_rtn = HEATRONIC_WriteHC_SollNiveau($hash, $val);
+      $call_rtn = HEATRONIC_WriteRequiredRoomTemperature($hash, $val);
     }
     # log command 
-    $log_str = "HEATRONIC_WriteHC_SollNiveau:".$a[2]." using value:".$val." success:".$call_rtn;
+    $log_str = "HEATRONIC_WriteRequiredRoomTemperature:".$a[2]." using value:".$val." success:".$call_rtn;
     Log3 ($name, 5, $log_str);
   }
   elsif($a[1] =~ m/_betriebsart$/) {
@@ -580,13 +580,13 @@ HEATRONIC_Set($@)
     return $log_str if(!defined($val));
 
     # execute command 
-    $call_rtn = HEATRONIC_WriteBetriebsart($hash, $val);
+    $call_rtn = HEATRONIC_WriteHeatingMode($hash, $val);
     if ($call_rtn == 0) {
       # repeat one time if failed
-      $call_rtn = HEATRONIC_WriteBetriebsart($hash, $val);
+      $call_rtn = HEATRONIC_WriteHeatingMode($hash, $val);
     }
     # log command 
-    $log_str = "HEATRONIC_WriteBetriebsart:".$a[2]." using value:".$val." success:".$call_rtn;
+    $log_str = "HEATRONIC_WriteHeatingMode:".$a[2]." using value:".$val." success:".$call_rtn;
     Log3 ($name, 5, $log_str);
   }
   else {
@@ -597,7 +597,7 @@ HEATRONIC_Set($@)
 
 
 sub 
-HEATRONIC_WriteHC_SollNiveau($$)
+HEATRONIC_WriteRequiredRoomTemperature($$)
 {
   my ($hash, $tsollniveau) = @_;
   my $name = $hash->{NAME};
@@ -629,7 +629,7 @@ HEATRONIC_WriteHC_SollNiveau($$)
 }
 
 sub 
-HEATRONIC_WriteBetriebsart($$)
+HEATRONIC_WriteHeatingMode($$)
 {
   my ($hash, $betriebsart) = @_;
   my $name = $hash->{NAME};
@@ -1093,24 +1093,24 @@ HEATRONIC_timeDiff($) {
       <br>
       where param is one of:
       <ul>
-        <li>hc1_heizensollniveau &lt;temp&gt;<br>
-          sets the 'heizen' temperature-niveau for heating circuit 1 (permanent)<br>
+        <li>hc1_requiredroomtemperature &lt;temp&gt;<br>
+          sets the 'comfort' temperature-niveau for heating circuit 1 (permanent)<br>
           0.5 celsius resolution - temperature between 10 and 30 celsius
         </li>
-        <li>hc1_betriebsart [ auto | heizen | sparen | frost ]<br>
+        <li>hc1_heatingmode [ auto | comfort | economy | frost ]<br>
           sets the working mode for heating circuit 1<br>
           <ul>
             <li>auto  : the timer program is active and the summer configuration is in effect</li>
-            <li>heizen: manual by 'heizen' working mode, no timer program is in effect</li>
-            <li>sparen: manual by 'sparen' working mode, no timer program is in effect</li>
+            <li>comfort: manual by 'comfort' working mode, no timer program is in effect</li>
+            <li>economy: manual by 'economy' working mode, no timer program is in effect</li>
             <li>frost : manual by 'frost'  working mode, no timer program is in effect</li>
           </ul></li>
       </ul>
       <br>
       Examples:
       <ul>
-        <code>set Boiler hc1_heizensollniveau 22.5</code><br>
-        <code>set Boiler hc1_betriebsart sparen</code>
+        <code>set Boiler hc1_requiredroomtemperature 22.5</code><br>
+        <code>set Boiler hc1_heatingmode economy</code>
       </ul>
       <br>
     </ul>
@@ -1263,24 +1263,24 @@ HEATRONIC_timeDiff($) {
       <br>
       wobei die Parameter folgende Werte haben:
       <ul>
-        <li>hc1_heizensollniveau &lt;temp&gt;<br>
-          Setzt das 'heizen' Temperature-Niveau f&uuml;r Heizkreis 1 (permanent)<br>
+        <li>hc1_requiredroomtemperature &lt;temp&gt;<br>
+          Setzt das 'comfort' Temperature-Niveau f&uuml;r Heizkreis 1 (permanent)<br>
           Aufl&ouml;sung 0.5 Celsius, Bereich: 10 bis 30 Celsius
         </li>
-        <li>hc1_betriebsart [ auto | heizen | sparen | frost ]<br>
+        <li>hc1_heatingmode [ auto | comfort | economy | frost ]<br>
           Setzt die Betriebsart des Heizkreises 1<br>
           <ul>
             <li>auto  : Das Timerprogramm und die Sommerzeit-Umschaltung sind aktiv </li>
-            <li>heizen: Manueller 'heizen' Mode, Timerprogramm deaktiv</li>
-            <li>sparen: Manueller 'sparen' Mode, Timerprogramm deaktiv</li>
+            <li>comfort: Manueller 'heizen' Mode, Timerprogramm deaktiv</li>
+            <li>economy: Manueller 'sparen' Mode, Timerprogramm deaktiv</li>
             <li>frost : Manueller 'frost'  Mode, Timerprogramm deaktiv</li>
           </ul></li>
       </ul>
       <br>
       Beispiele:
       <ul>
-        <code>set Boiler hc1_heizensollniveau 22.5</code><br>
-        <code>set Boiler hc1_betriebsart sparen</code>
+        <code>set Boiler hc1_requiredroomtemperature 22.5</code><br>
+        <code>set Boiler hc1_heatingmode sparen</code>
       </ul>
       <br>
     </ul>
